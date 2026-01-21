@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: breakout-postgres
+    environment:
+      POSTGRES_USER: breakout_user
+      POSTGRES_PASSWORD: breakout_pass
+      POSTGRES_DB: breakout_room_booking
+    ports:
+      - "5433:5432"  
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

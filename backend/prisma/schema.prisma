@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  user
+  admin
+}
+
+enum RoomStatus {
+  active
+  maintenance
+  archived
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled
+  expired
+}
+
+// Models
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         Role
+  bookings     Booking[]
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("users")
+}
+
+model Room {
+  id                String             @id @default(uuid())
+  name              String             @unique
+  capacity          Int
+  equipment         Json               @default("[]")
+  status            RoomStatus
+  bookings          Booking[]
+  maintenanceBlocks MaintenanceBlock[]
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([capacity])
+  @@map("rooms")
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  roomId      String        @map("room_id")
+  startAt     DateTime      @map("start_at")
+  endAt       DateTime      @map("end_at")
+  status      BookingStatus
+  cancelledAt DateTime?     @map("cancelled_at")
+  cancelledBy String?       @map("cancelled_by")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room        Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([roomId, startAt, endAt])
+  @@index([userId])
+  @@index([status])
+  @@index([startAt])
+  @@map("bookings")
+}
+
+model MaintenanceBlock {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  startAt   DateTime @map("start_at")
+  endAt     DateTime @map("end_at")
+  reason    String?
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([roomId, startAt, endAt])
+  @@map("maintenance_blocks")
+}
+
+model RuleConfig {
+  id                      Int      @id @default(1)
+  openHour                Int      @map("open_hour")
+  closeHour               Int      @map("close_hour")
+  timeSlotIntervalMinutes Int      @map("time_slot_interval_minutes")
+  minDurationMinutes      Int      @map("min_duration_minutes")
+  maxDurationMinutes      Int      @map("max_duration_minutes")
+  maxActiveBookings       Int      @map("max_active_bookings")
+  maxConsecutive          Int?     @map("max_consecutive")
+  cooldownMinutes         Int?     @map("cooldown_minutes")
+  minNoticeMinutes        Int      @map("min_notice_minutes")
+  maxDaysAhead            Int      @map("max_days_ahead")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("rule_config")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  payload    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
